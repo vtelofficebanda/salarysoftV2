@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VTEL - Secure Login</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --primary: #10b981; /* Dashboard se matched Emerald Green */
+            --secondary: #0f172a;
+            --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            --error: #ef4444;
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        body {
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg-gradient);
+            overflow: hidden;
+        }
+
+        .login-container {
+            width: 100%;
+            max-width: 400px;
+            padding: 20px;
+        }
+
+        .login-card {
+            background: rgba(255, 255, 255, 1);
+            padding: 40px;
+            border-radius: 24px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            text-align: center;
+        }
+
+        .login-card h2 {
+            margin: 0 0 10px 0;
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--secondary);
+            letter-spacing: -1px;
+        }
+
+        .login-card p.subtitle {
+            color: #64748b;
+            font-size: 14px;
+            margin-bottom: 30px;
+        }
+
+        /* Input Styling */
+        input {
+            width: 100%;
+            padding: 14px 16px;
+            margin-bottom: 20px;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 15px;
+            transition: all 0.3s ease;
+            outline: none;
+            background: #f8fafc;
+        }
+
+        input:focus {
+            border-color: var(--primary);
+            background: #fff;
+            box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1);
+        }
+
+        /* Password Wrapper */
+        .password-wrapper {
+            position: relative;
+            width: 100%;
+        }
+
+        .password-wrapper input {
+            margin-bottom: 20px;
+            padding-right: 45px;
+        }
+
+        .eye {
+            position: absolute;
+            right: 15px;
+            top: 16px;
+            cursor: pointer;
+            color: #94a3b8;
+            font-size: 18px;
+            user-select: none;
+            transition: 0.2s;
+        }
+
+        .eye:hover {
+            color: var(--secondary);
+        }
+
+        /* Button Styling */
+        button {
+            width: 100%;
+            padding: 14px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        button:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+            box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        /* Error Message */
+        #errorMsg {
+            color: var(--error);
+            font-size: 13px;
+            margin-top: 15px;
+            min-height: 18px;
+            font-weight: 500;
+        }
+
+        /* Loader Animation */
+        .loader {
+            width: 18px;
+            height: 18px;
+            border: 2px solid #ffffff;
+            border-bottom-color: transparent;
+            border-radius: 50%;
+            display: none;
+            animation: rotation 1s linear infinite;
+        }
+
+        @keyframes rotation {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Footer Text */
+        .footer-text {
+            margin-top: 25px;
+            font-size: 12px;
+            color: #94a3b8;
+        }
+    </style>
+</head>
+<body>
+
+<div class="login-container">
+    <div class="login-card">
+        <h2>VTEL Secure Login</h2>
+        <p class="subtitle">Enter your credentials to access dashboard</p>
+
+        <input type="email" id="email" placeholder="Email Address">
+
+        <div class="password-wrapper">
+            <input type="password" id="password" placeholder="Password">
+            <span id="togglePassword" class="eye">👁️</span>
+        </div>
+
+        <button id="loginBtn">
+            <span id="btnText">Sign In</span>
+            <span id="loader" class="loader"></span>
+        </button>
+
+        <p id="errorMsg"></p>
+
+        <div class="footer-text">
+            &copy; 2026 VTEL Systems. All rights reserved.
+        </div>
+    </div>
+</div>
+
+<script>
+    // Password Toggle Logic
+    const togglePassword = document.querySelector('#togglePassword');
+    const password = document.querySelector('#password');
+
+    togglePassword.addEventListener('click', function () {
+        const type = password.getAttribute('type') === 'password' ? 'text' : 'password';
+        password.setAttribute('type', type);
+        this.textContent = type === 'password' ? '👁️' : '🔒';
+    });
+</script>
+
+<script type="module" src="../js/loginController.js"></script>
+
+</body>
+</html>

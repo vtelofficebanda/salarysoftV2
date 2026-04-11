@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance & Advance - VTEL</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+
+    <style>
+        :root {
+            --primary: #10b981;
+            --secondary: #0f172a;
+            --accent: #3b82f6;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+        }
+
+        * { box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; }
+        body { margin: 0; background-color: var(--bg); color: var(--text-main); padding: 20px; min-height: 100vh; }
+
+        /* Header */
+        .header-wrapper {
+            display: flex; justify-content: space-between; align-items: center;
+            max-width: 900px; margin: 0 auto 30px auto;
+            background: var(--card-bg); padding: 15px 25px; border-radius: 16px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        }
+
+        .header-wrapper h2 {
+            margin: 0; font-size: 22px; font-weight: 700;
+            background: linear-gradient(90deg, var(--secondary), var(--primary));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+
+        .back-btn {
+            background: var(--secondary); color: white; padding: 10px 18px;
+            border-radius: 10px; border: none; font-weight: 600; cursor: pointer;
+            transition: 0.2s; display: flex; align-items: center; gap: 8px;
+        }
+
+        /* Layout */
+        .container { max-width: 900px; margin: 0 auto; }
+        .card { 
+            background: var(--card-bg); padding: 25px; border-radius: 20px; 
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05); margin-bottom: 25px; 
+        }
+        .card h3 { 
+            margin: 0 0 20px 0; font-size: 17px; color: var(--secondary); 
+            border-bottom: 2px solid #f1f5f9; padding-bottom: 12px;
+        }
+
+        /* Inputs */
+        .input-row { display: flex; gap: 15px; margin-bottom: 15px; flex-wrap: wrap; }
+        .input-group { flex: 1; min-width: 200px; margin-bottom: 15px; }
+        label { display: block; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px; }
+        
+        input, select { 
+            width: 100%; padding: 12px; border: 1.5px solid #e2e8f0; 
+            border-radius: 10px; font-size: 14px; outline: none; transition: 0.3s;
+        }
+        input:focus, select:focus { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1); }
+
+        /* Buttons */
+        .btn { 
+            padding: 12px 20px; border-radius: 10px; border: none; font-weight: 700; 
+            cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; 
+        }
+        .btn-primary { background: var(--primary); color: white; width: 100%; }
+        .btn-download { background: var(--secondary); color: white; height: 45px; }
+        .btn:hover { opacity: 0.9; transform: translateY(-1px); }
+
+        /* Table */
+        .table-container { overflow-x: auto; border: 1px solid #f1f5f9; border-radius: 12px; }
+        table { width: 100%; border-collapse: collapse; }
+        th { background: #f8fafc; color: var(--text-muted); text-align: left; padding: 14px; font-size: 11px; text-transform: uppercase; border-bottom: 2px solid #f1f5f9; }
+        td { padding: 14px; border-bottom: 1px solid #f1f5f9; font-size: 14px; }
+
+        .amt-red { color: #dc2626; font-weight: 700; background: #fee2e2; padding: 3px 8px; border-radius: 5px; }
+    </style>
+</head>
+<body>
+
+<div class="header-wrapper">
+    <h2>📅 Attendance Portal</h2>
+    <button class="back-btn" onclick="goBack()">← Dashboard</button>
+</div>
+
+<div class="container">
+
+    <div class="card">
+        <h3>📝 New Daily Entry</h3>
+        
+        <div class="input-group">
+            <label>Select Employee</label>
+            <select id="attEmployee">
+                <option value="">Loading employees...</option>
+            </select>
+        </div>
+
+        <div class="input-row">
+            <div class="input-group">
+                <label>Date</label>
+                <input type="date" id="attDate">
+            </div>
+            <div class="input-group">
+                <label>Status</label>
+                <select id="attStatus">
+                    <option value="1">Full Day (1.0)</option>
+                    <option value="0.5">Half Day (0.5)</option>
+                    <option value="0">Absent (0)</option>
+                    <option value="1.5">Overtime (1.5)</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label>Advance Taken (₹)</label>
+                <input type="number" id="attAdvance" placeholder="0" value="0">
+            </div>
+        </div>
+
+        <button class="btn btn-primary" id="saveAttendanceBtn">✅ Save Attendance Record</button>
+    </div>
+
+    <div class="card">
+        <h3>📊 Export Monthly Report</h3>
+        <div class="input-row" style="align-items: flex-end;">
+            <div class="input-group" style="flex: 2;">
+                <label>Select Employee</label>
+                <select id="reportEmployee">
+                    <option value="">All Employees</option>
+                </select>
+            </div>
+            <div class="input-group" style="flex: 1;">
+                <label>Month</label>
+                <input type="month" id="reportMonth">
+            </div>
+            <div class="input-group" style="flex: 0;">
+                <button class="btn btn-download" id="downloadReportBtn">📥 Download</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>📋 Recent Attendance Logs</h3>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Employee Name</th>
+                        <th>Status</th>
+                        <th>Advance</th>
+                    </tr>
+                </thead>
+                <tbody id="attendanceLogs">
+                    <tr>
+                        <td colspan="4" style="text-align:center; padding: 20px; color: var(--text-muted);">
+                            Fetching records...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    function goBack() { window.location.href = "dashboard.html"; }
+
+    // Auto-set current month and date
+    const now = new Date();
+    document.getElementById('reportMonth').value = now.toISOString().slice(0, 7);
+    document.getElementById('attDate').valueAsDate = now;
+</script>
+
+<script type="module" src="../js/attendanceController.js"></script>
+
+</body>
+</html>
