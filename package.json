@@ -7,57 +7,42 @@
     "start": "electron .",
     "build": "electron-builder"
   },
-  "keywords": [],
   "author": "VTEL",
   "license": "ISC",
-  "type": "commonjs",
+
   "devDependencies": {
-    "electron": "^40.8.5",
-    "electron-builder": "^26.8.1"
+    "electron": "^28.2.0",
+    "electron-builder": "^24.13.3"
   },
-  "build": {
-    "appId": "com.vtel.salarysoft",
-    "productName": "VTEL Salary Manager",
-    "directories": {
-      "buildResources": "build"
-    },
-    "files": [
-      "css/**/*",
-      "js/**/*",
-      "model/**/*",
-      "views/**/*",
-      "main.js",
-      "package.json"
-    ],
-    "asar": true,
-    "win": {
-      "icon": "build/icon.ico",
-      "target": [
-        {
-          "target": "nsis",
-          "arch": [
-            "x64"
-          ]
-        }
-      ]
-    },
-    "nsis": {
-      "oneClick": true,
-      "perMachine": false,
-      "allowToChangeInstallationDirectory": false,
-      "installerIcon": "build/icon.ico",
-      "uninstallerIcon": "build/icon.ico",
-      "installerHeaderIcon": "build/icon.ico"
-    },
-    "publish": {
-      "provider": "github",
-      "owner": "vtelofficebanda",
-      "repo": "salarysoft",
-      "private": true
-    }
-  },
+
   "dependencies": {
     "electron-updater": "^6.8.3",
     "xlsx": "^0.18.5"
+  },
+
+  "build": {
+    "appId": "com.vtel.salarysoft",
+    "productName": "VTEL Salary Manager",
+
+    "directories": {
+      "output": "dist"
+    },
+
+    "files": [
+      "**/*"
+    ],
+
+    "asar": true,
+
+    "win": {
+      "icon": "build/icon.ico",
+      "target": "nsis"
+    },
+
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": false
+    }
   }
 }

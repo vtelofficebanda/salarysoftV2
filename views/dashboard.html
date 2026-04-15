@@ -3,143 +3,234 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VTEL - Professional Dashboard</title>
+    <title>VTEL - Dynamic Dashboard</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <style>
         :root {
-            --primary: #10b981;
-            --secondary: #0f172a;
-            --accent: #3b82f6;
-            --bg: #f8fafc;
-            --card-bg: #ffffff;
-            --text-main: #1e293b;
-            --text-muted: #64748b;
-            --danger: #ef4444;
+            --primary: #4f46e5;
+            --bg: #f1f5f9;
+            --card: #ffffff;
+            --text: #1e293b;
         }
 
         * { box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; }
-        body { margin: 0; background-color: var(--bg); color: var(--text-main); padding: 20px; }
-
-        input[type=number]::-webkit-inner-spin-button, 
-        input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-
-        .header-wrapper {
-            display: flex; justify-content: space-between; align-items: center;
-            max-width: 1200px; margin: 0 auto 30px auto;
-            background: var(--card-bg); padding: 15px 25px; border-radius: 16px;
-            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        
+        body { 
+            margin: 0; 
+            height: 100vh; 
+            background: var(--bg); 
+            display: flex; 
+            flex-direction: column;
+            overflow: hidden; /* Main page scroll band */
         }
 
-        .logo { height: 45px; border-radius: 8px; }
-        .header-wrapper h2 {
-            margin: 0; font-size: 20px; font-weight: 700;
-            background: linear-gradient(90deg, var(--secondary), var(--primary));
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        /* Top Navigation */
+        .navbar {
+            height: 60px;
+            background: var(--card);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 30px;
+            border-bottom: 1px solid #e2e8f0;
+            flex-shrink: 0;
         }
 
-        .stats-container {
-            display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 20px; max-width: 1200px; margin: 0 auto 30px auto;
+        .logo-section { display: flex; align-items: center; gap: 10px; }
+        .logo-section img { height: 35px; border-radius: 5px; }
+        .logo-section h2 { font-size: 18px; margin: 0; color: var(--text); }
+
+        /* Main Workspace */
+        .workspace {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            gap: 20px;
+            padding: 20px;
         }
 
-        .stat-card {
-            background: var(--card-bg); padding: 20px; border-radius: 16px;
-            border-left: 5px solid var(--primary); box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        /* Left Side: Forms (Static) */
+        .sidebar-forms {
+            width: 400px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            overflow-y: auto; /* Agar forms zyada hon to side me scroll ho */
+            padding-right: 5px;
         }
 
-        .main-grid {
-            display: grid; grid-template-columns: 450px 1fr; gap: 25px;
-            max-width: 1200px; margin: 0 auto;
+        /* Right Side: Table & Stats (Main View) */
+        .main-view {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            min-width: 0; /* Prevents flex items from bursting */
         }
 
-        @media (max-width: 1000px) { .main-grid { grid-template-columns: 1fr; } }
+        /* Components */
+        .card {
+            background: var(--card);
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            padding: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
 
-        .card { background: var(--card-bg); padding: 25px; border-radius: 20px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05); margin-bottom: 25px; }
-        .card h3 { margin: 0 0 20px 0; font-size: 18px; border-bottom: 2px solid #f1f5f9; padding-bottom: 12px; }
+        .card-header { font-weight: 700; margin-bottom: 15px; display: flex; align-items: center; gap: 8px; font-size: 14px; }
 
-        input, select { width: 100%; padding: 12px 16px; border: 1.5px solid #e2e8f0; border-radius: 10px; margin-bottom: 15px; }
-        label { font-size: 12px; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 5px; }
+        /* Stats Grid */
+        .stats-mini {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+        }
+        .stat-item { background: var(--card); padding: 15px; border-radius: 12px; border: 1px solid #e2e8f0; }
+        .stat-item small { font-size: 11px; color: #64748b; font-weight: 600; text-transform: uppercase; }
+        .stat-item div { font-size: 18px; font-weight: 700; margin-top: 5px; }
 
-        .btn { padding: 12px 20px; border-radius: 10px; border: none; font-weight: 600; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; }
-        .btn-primary { background: var(--primary); color: white; width: 100%; }
-        .btn-outline { background: transparent; border: 1.5px solid var(--primary); color: var(--primary); width: 100%; margin-top: 10px; }
-        .attendance-btn { background: var(--secondary); color: white; }
+        /* Form Styling */
+        label { display: block; font-size: 11px; font-weight: 700; color: #64748b; margin-bottom: 4px; text-transform: uppercase; }
+        input, select {
+            width: 100%;
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid #cbd5e1;
+            margin-bottom: 12px;
+            font-size: 13px;
+        }
 
-        .table-wrapper { overflow-y: auto; border: 1px solid #f1f5f9; border-radius: 12px; max-height: 500px; }
+        .btn {
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 13px;
+            transition: 0.2s;
+        }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { opacity: 0.9; }
+
+        /* Table Area - Proper Scrolling */
+        .table-container {
+            flex: 1;
+            background: var(--card);
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .table-scroll {
+            overflow-y: auto;
+            flex: 1;
+        }
+
         table { width: 100%; border-collapse: collapse; }
-        th { position: sticky; top: 0; background: #f8fafc; padding: 14px; text-align: left; font-size: 12px; color: var(--text-muted); border-bottom: 2px solid #f1f5f9; }
-        td { padding: 14px; border-bottom: 1px solid #f1f5f9; font-size: 14px; }
+        thead th {
+            position: sticky;
+            top: 0;
+            background: #f8fafc;
+            padding: 12px;
+            text-align: left;
+            font-size: 12px;
+            color: #64748b;
+            border-bottom: 1px solid #e2e8f0;
+            z-index: 10;
+        }
+        tbody td { padding: 12px; border-bottom: 1px solid #f1f5f9; font-size: 13px; }
+
+        .search-box {
+            padding: 15px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
     </style>
 </head>
 <body>
 
-<div class="header-wrapper">
-    <div class="logo-area" style="display:flex; align-items:center; gap:15px;">
-        <img src="../assets/logo.jpeg" class="logo" alt="VTEL Logo">
-        <h2>VTEL Salary Dashboard</h2>
+<nav class="navbar">
+    <div class="logo-section">
+        <img src="../assets/logo.jpeg" alt="Logo">
+        <h2>VTEL Systems</h2>
     </div>
-    <button class="btn attendance-btn" onclick="goToAttendance()">📅 Attendance & Advance</button>
-</div>
+    <button class="btn btn-primary" onclick="goToAttendance()" style="width: auto; padding: 6px 15px;">
+        <i class="fa-solid fa-calendar-check"></i> Attendance
+    </button><button class="btn btn-primary" onclick="goToStock()" style="width: auto; padding: 6px 15px;">
+        <i class="fa-solid fa-boxes-packing"></i> Stock
+    </button>
+</nav>
 
-<div class="stats-container">
-    <div class="stat-card"><h4>Total Employees</h4><p id="totalEmployees">0</p></div>
-    <div class="stat-card" style="border-left-color: var(--accent);"><h4>Total Salary</h4><p id="totalSalary">₹ 0</p></div>
-    <div class="stat-card" style="border-left-color: #f59e0b;"><h4>Total Advance</h4><p id="totalAdvance">₹ 0</p></div>
-    <div class="stat-card" style="border-left-color: #6366f1;"><h4>Last Payment</h4><p id="lastPayment">-</p></div>
-</div>
-
-<div class="main-grid">
-    <div class="form-column">
+<div class="workspace">
+    <div class="sidebar-forms">
         <div class="card">
-            <h3>👤 Add Employee</h3>
-            <input type="text" id="aadhaar" placeholder="Aadhaar Number">
-            <input type="text" id="name" placeholder="Full Name">
-            <input type="number" id="empSalary" placeholder="Monthly Salary (₹)">
+            <div class="card-header"><i class="fa-solid fa-user-plus"></i> Add Employee</div>
+            <label>Full Name</label>
+            <input type="text" id="name" placeholder="John Doe">
+            <label>Aadhaar Number</label>
+            <input type="text" id="aadhaar" placeholder="0000 0000 0000">
+            <label>Monthly Salary</label>
+            <input type="number" id="empSalary" placeholder="₹">
             <div style="display: flex; gap: 10px;">
-                <input type="text" id="mobile" placeholder="Mobile">
-                <input type="email" id="email" placeholder="Email">
+                <div style="flex:1"><label>Mobile</label><input type="text" id="mobile"></div>
+                <div style="flex:1"><label>Email</label><input type="email" id="email"></div>
             </div>
-            <button class="btn btn-primary" id="addEmployeeBtn">Add Employee</button>
+            <button class="btn btn-primary" id="addEmployeeBtn">Add to System</button>
         </div>
 
         <div class="card">
-            <h3>💰 Generate Salary</h3>
+            <div class="card-header"><i class="fa-solid fa-wallet"></i> Salary Generator</div>
+            <label>Employee</label>
             <select id="salaryEmployee"><option value="">Select Employee</option></select>
-            <div style="display: flex; gap: 12px;">
-                <div style="flex:1"><label>From Date</label><input type="date" id="fromDate"></div>
-                <div style="flex:1"><label>To Date</label><input type="date" id="toDate"></div>
+            <div style="display: flex; gap: 10px;">
+                <div style="flex:1"><label>From</label><input type="date" id="fromDate"></div>
+                <div style="flex:1"><label>To</label><input type="date" id="toDate"></div>
             </div>
-            <select id="paymentMode">
-                <option value="">Select Payment Mode</option>
-                <option value="Cash">Cash</option>
-                <option value="Online">Online</option>
-            </select>
-            <input type="text" id="transactionId" placeholder="Transaction ID (Online Only)">
-            <select id="salaryStatus">
-                <option value="pending">Pending</option>
-                <option value="paid">Paid</option>
-            </select>
+            <label>Method & Status</label>
+            <div style="display: flex; gap: 10px;">
+                <select id="paymentMode"><option>Cash</option><option>Online</option></select>
+                <select id="salaryStatus"><option value="pending">Pending</option><option value="paid">Paid</option></select>
+            </div>
+            <input type="text" id="transactionId" placeholder="Transaction ID">
             <button class="btn btn-primary" id="saveSalaryBtn">Generate Salary</button>
-            <button class="btn btn-outline" id="exportExcel">📥 Download Excel</button>
+            <button class="btn" id="exportExcel" style="background: #f1f5f9; color: #1e293b; margin-top: 8px;">Export Excel</button>
         </div>
     </div>
 
-    <div class="list-column">
-        <div class="card" style="height: 100%; display: flex; flex-direction: column;">
-            <h3>📋 Employee List</h3>
-            <input type="text" id="searchInput" placeholder="Search by name or ID..." style="margin-bottom: 15px;">
-            <div class="table-wrapper">
+    <div class="main-view">
+        <div class="stats-mini">
+            <div class="stat-item"><small>Total Emp</small><div id="totalEmployees">0</div></div>
+            <div class="stat-item"><small>Total Payout</small><div id="totalSalary" style="color: var(--primary);">₹ 0</div></div>
+            <div class="stat-item"><small>Advances</small><div id="totalAdvance" style="color: #e11d48;">₹ 0</div></div>
+            <div class="stat-item"><small>Status</small><div id="lastPayment">Active</div></div>
+        </div>
+
+        <div class="table-container">
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="Quick search employees..." style="margin-bottom: 0;">
+            </div>
+            <div class="table-scroll">
                 <table>
                     <thead>
-                        <tr><th>ID / Aadhaar</th><th>Name</th><th>Status</th></tr>
+                        <tr>
+                            <th>Aadhaar / ID</th>
+                            <th>Name</th>
+                            <th>Mobile</th>
+                            <th>Status</th>
+                        </tr>
                     </thead>
-                    <tbody id="employeeTable"></tbody>
+                    <tbody id="employeeTable">
+                        </tbody>
                 </table>
             </div>
         </div>
@@ -149,7 +240,11 @@
 <script>
     function goToAttendance() { window.location.href = "attendance.html"; }
 </script>
+<script>
+    function goToStock() { window.location.href = "stock.html"; }   
+</script>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script type="module" src="../js/dashboardController.js"></script>
 <script type="module" src="../js/controllers/salaryController.js"></script>
 <script type="module" src="../js/employeeController.js"></script>

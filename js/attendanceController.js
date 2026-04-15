@@ -1,12 +1,12 @@
 import { db } from "./firebase.js"; 
 import { 
-  collection, addDoc, getDocs, query, orderBy, limit 
+  collection, addDoc, getDocs, query, orderBy, limit, updateDoc, doc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const saveBtn = document.getElementById('saveAttendanceBtn');
 const employeeDropdown = document.getElementById('attEmployee');
-//import * as XLSX from "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
 
+let currentEditId = null;
 
 // ================= LOAD EMPLOYEES DROPDOWN =================
 async function loadEmployees() {
@@ -14,11 +14,11 @@ async function loadEmployees() {
 
     employeeDropdown.innerHTML = '<option value="">Select Employee</option>';
 
-    snapshot.forEach(doc => {
-        const emp = doc.data();
+    snapshot.forEach(docSnap => {
+        const emp = docSnap.data();
 
         employeeDropdown.innerHTML += `
-            <option value="${emp.aadhaar}|${emp.name}">
+            <option value='${JSON.stringify(emp)}'>
                 ${emp.name}
             </option>
         `;
@@ -35,7 +35,7 @@ saveBtn.addEventListener('click', async () => {
         return;
     }
 
-    const [aadhaar, name] = selected.split("|");
+    const emp = JSON.parse(selected);
 
     const date = document.getElementById('attDate').value;
     const status = parseFloat(document.getElementById('attStatus').value);
@@ -48,8 +48,8 @@ saveBtn.addEventListener('click', async () => {
 
     try {
         await addDoc(collection(db, "daily_records"), {
-            aadhaar,
-            name, // 🔥 NEW
+            aadhaar: emp.aadhaar,
+            name: emp.name,
             date,
             status,
             advance,
@@ -57,7 +57,9 @@ saveBtn.addEventListener('click', async () => {
         });
 
         alert("✅ Record Saved Successfully!");
-        location.reload();
+
+        // 🔥 reload hata ke smooth refresh
+        loadLogs();
 
     } catch (e) {
         console.error(e);
@@ -77,10 +79,9 @@ async function loadLogs() {
     const tableBody = document.getElementById('attendanceLogs');
     tableBody.innerHTML = "";
 
-    snapshot.forEach(doc => {
-        const data = doc.data();
+    snapshot.forEach(docSnap => {
+        const data = docSnap.data();
 
-        // 🔥 STATUS TEXT
         let statusText = "";
         if (data.status === 1) statusText = "Full Day";
         else if (data.status === 0.5) statusText = "Half Day";
@@ -88,28 +89,34 @@ async function loadLogs() {
         else statusText = "Absent";
 
         tableBody.innerHTML += `
-            <tr>
-                <td>${data.date}</td>
-                <td>${data.name || "-"}</td>
-                <td>${statusText}</td>
-                <td><span class="amt-red">₹${data.advance}</span></td>
-            </tr>
-        `;
+<tr>
+    <td>${data.date}</td>
+    <td>${data.name || "-"}</td>
+    <td>${statusText}</td>
+    <td>
+        <span class="amt-red">₹${data.advance || 0}</span>
+        <button onclick="editAdvance('${docSnap.id}', ${data.advance || 0})" 
+            style="margin-left:10px; cursor:pointer;">
+            ✏️
+        </button>
+    </td>
+</tr>
+`;
     });
 }
 
-// ================= LOAD EMPLOYEES IN REPORT DROPDOWN =================
+// ================= LOAD REPORT EMPLOYEES =================
 async function loadReportEmployees() {
     const snapshot = await getDocs(collection(db, "employees"));
     const dropdown = document.getElementById("reportEmployee");
 
     dropdown.innerHTML = '<option value="">Select Employee</option>';
 
-    snapshot.forEach(doc => {
-        const emp = doc.data();
+    snapshot.forEach(docSnap => {
+        const emp = docSnap.data();
 
         dropdown.innerHTML += `
-            <option value="${emp.aadhaar}|${emp.name}">
+            <option value='${JSON.stringify(emp)}'>
                 ${emp.name}
             </option>
         `;
@@ -128,16 +135,16 @@ document.getElementById("downloadReportBtn")
         return;
     }
 
-    const [aadhaar, name] = selected.split("|");
+    const emp = JSON.parse(selected);
 
     const snapshot = await getDocs(collection(db, "daily_records"));
 
     let data = [];
 
-    snapshot.forEach(doc => {
-        const d = doc.data();
+    snapshot.forEach(docSnap => {
+        const d = docSnap.data();
 
-        if (d.aadhaar === aadhaar && d.date.startsWith(month)) {
+        if (d.aadhaar === emp.aadhaar && d.date.startsWith(month)) {
 
             let statusText = "";
             if (d.status === 1) statusText = "Full Day";
@@ -147,9 +154,9 @@ document.getElementById("downloadReportBtn")
 
             data.push({
                 Date: d.date,
-                Employee: name,
+                Employee: emp.name,
                 Status: statusText,
-                Advance: d.advance
+                Advance: d.advance || 0
             });
         }
     });
@@ -159,15 +166,93 @@ document.getElementById("downloadReportBtn")
         return;
     }
 
-    // 🔥 CREATE EXCEL
+    const XLSX = window.require("xlsx");
+    const { ipcRenderer } = window.require("electron");
+
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Attendance");
 
-    XLSX.writeFile(wb, `${name}_${month}_Attendance.xlsx`);
+    const buffer = XLSX.write(wb, {
+        bookType: "xlsx",
+        type: "array"
+    });
+
+    const result = await ipcRenderer.invoke("save-excel-file", buffer);
+
+    if (result.success) {
+        alert("✅ Attendance Excel saved: " + result.path);
+    } else {
+        alert("❌ Save cancelled");
+    }
 });
 
-// INIT
+// ================= EDIT ADVANCE =================
+window.editAdvance = function(id, currentAdvance) {
+    currentEditId = id;
+
+    const input = document.getElementById("editAdvanceInput");
+
+    input.value = currentAdvance;
+
+    document.getElementById("editModal").style.display = "flex";
+
+    // 🔥 HARD FIX (focus + select)
+    setTimeout(() => {
+        input.focus();
+        input.select();
+    }, 50);
+};
+
+// ================= CLOSE MODAL =================
+window.closeModal = function() {
+    document.getElementById("editModal").style.display = "none";
+
+    // 🔥 reset everything
+    currentEditId = null;
+    document.getElementById("editAdvanceInput").value = "";
+};
+// ================= SAVE EDIT =================
+document.getElementById("saveAdvanceBtn")
+.addEventListener("click", async () => {
+
+    const input = document.getElementById("editAdvanceInput");
+
+    const amount = parseFloat(input.value);
+
+    if (isNaN(amount) || amount < 0) {
+        alert("Invalid amount");
+        return;
+    }
+
+    if (!currentEditId) {
+        alert("Something went wrong!");
+        return;
+    }
+
+    try {
+        await updateDoc(doc(db, "daily_records", currentEditId), {
+            advance: amount
+        });
+
+        alert("✅ Advance updated");
+
+        closeModal();
+
+        // 🔥 IMPORTANT: CLEAR INPUT + RESET STATE
+        input.value = "";
+        currentEditId = null;
+
+        // 🔥 NO reload → direct refresh
+        await loadLogs();
+
+    } catch (error) {
+        console.error(error);
+        alert("❌ Update failed");
+    }
+});
+
+// ================= INIT =================
 loadEmployees();
 loadLogs();
 loadReportEmployees();
