@@ -73,13 +73,20 @@ document.addEventListener("DOMContentLoaded", () => {
     snapshot.forEach(doc => {
       const data = doc.data();
 
-      table.innerHTML += `
-        <tr>
-          <td>${data.aadhaar}</td>
-          <td>${data.name}</td>
-          <td>${data.isActive ? "Active" : "Inactive"}</td>
-        </tr>
-      `;
+    table.innerHTML += `
+  <tr>
+    <td>${data.aadhaar}</td>
+    <td>${data.name}</td>
+    <td>${data.mobile || "-"}</td>
+    <td>${data.isActive ? "Active" : "Inactive"}</td>
+    <td>
+      <button onclick="deleteEmployee('${doc.id}')" 
+        style="background:#ef4444;color:white;border:none;padding:5px 10px;border-radius:6px;cursor:pointer;">
+        Delete
+      </button>
+    </td>
+  </tr>
+`;
     });
   }
 

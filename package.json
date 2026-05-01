@@ -9,36 +9,28 @@
   },
   "author": "VTEL",
   "license": "ISC",
-
   "devDependencies": {
     "electron": "^28.2.0",
     "electron-builder": "^24.13.3"
   },
-
   "dependencies": {
     "electron-updater": "^6.8.3",
     "xlsx": "^0.18.5"
   },
-
   "build": {
     "appId": "com.vtel.salarysoft",
     "productName": "VTEL Salary Manager",
-
     "directories": {
       "output": "dist"
     },
-
     "files": [
       "**/*"
     ],
-
     "asar": true,
-
     "win": {
       "icon": "build/icon.ico",
       "target": "nsis"
     },
-
     "nsis": {
       "oneClick": true,
       "perMachine": false,

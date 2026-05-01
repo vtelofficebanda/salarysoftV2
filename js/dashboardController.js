@@ -3,7 +3,9 @@ import { db } from "./firebase.js";
 import {
   addDoc,
   collection,
-  getDocs
+  getDocs,
+  deleteDoc,
+  doc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -31,7 +33,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     try {
-
       await addDoc(collection(db, "employees"), {
         aadhaar,
         name,
@@ -44,7 +45,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       alert("✅ Employee Added");
 
-      // reset
+      // reset form
       document.getElementById("aadhaar").value = "";
       document.getElementById("name").value = "";
       document.getElementById("empSalary").value = "";
@@ -70,15 +71,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const snapshot = await getDocs(collection(db, "employees"));
 
-    snapshot.forEach(doc => {
-      const data = doc.data();
+    snapshot.forEach(docSnap => {
+      const data = docSnap.data();
 
       table.innerHTML += `
-        <tr>
-          <td>${data.aadhaar}</td>
-          <td>${data.name}</td>
-          <td>${data.isActive ? "Active" : "Inactive"}</td>
-        </tr>
+      <tr>
+        <td>${data.aadhaar}</td>
+        <td>${data.name}</td>
+        <td>${data.mobile || "-"}</td>
+        <td>${data.isActive ? "Active" : "Inactive"}</td>
+        <td>
+          <button onclick="deleteEmployee('${docSnap.id}')" 
+            style="background:#ef4444;color:white;border:none;padding:5px 10px;border-radius:6px;cursor:pointer;">
+            Delete
+          </button>
+        </td>
+      </tr>
       `;
     });
   }
@@ -96,9 +104,9 @@ document.addEventListener("DOMContentLoaded", () => {
     let totalAdvance = 0;
     let lastPayment = "-";
 
-    salarySnapshot.forEach(doc => {
+    salarySnapshot.forEach(docSnap => {
 
-      const data = doc.data();
+      const data = docSnap.data();
 
       totalSalary += data.finalSalary || 0;
       totalAdvance += data.tAdvance || 0;
@@ -120,3 +128,21 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
 });
+
+// ================= DELETE EMPLOYEE =================
+window.deleteEmployee = async function(id) {
+
+  const confirmDelete = confirm("Delete this employee?");
+  if (!confirmDelete) return;
+
+  try {
+    await deleteDoc(doc(db, "employees", id));
+    alert("✅ Employee Deleted");
+
+    location.reload();
+
+  } catch (error) {
+    console.error(error);
+    alert("❌ Error: " + error.message);
+  }
+};

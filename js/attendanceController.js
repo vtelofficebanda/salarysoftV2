@@ -1,8 +1,7 @@
 import { db } from "./firebase.js"; 
 import { 
-  collection, addDoc, getDocs, query, orderBy, limit, updateDoc, doc
+  collection, addDoc, getDocs, query, orderBy, limit, updateDoc, doc, deleteDoc, where
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
 const saveBtn = document.getElementById('saveAttendanceBtn');
 const employeeDropdown = document.getElementById('attEmployee');
 
@@ -46,63 +45,112 @@ saveBtn.addEventListener('click', async () => {
         return;
     }
 
+    // ✅ SUNDAY CHECK (FIXED)
+    const selectedDate = new Date(date); // 🔥 yahi fix hai
+    const day = selectedDate.getDay();
+
+    if (day === 0) {
+        alert("⚠️ Sunday hai — Advance allowed hai");
+    }
+
     try {
+
+        // ✅ DUPLICATE CHECK
+        const q = query(
+            collection(db, "daily_records"),
+            where("aadhaar", "==", emp.aadhaar),
+            where("date", "==", date)
+        );
+
+        const snapshot = await getDocs(q);
+
+        if (!snapshot.empty) {
+            alert("❌ Attendance already exists for this date");
+            return;
+        }
+
+        // ✅ SAVE RECORD
         await addDoc(collection(db, "daily_records"), {
             aadhaar: emp.aadhaar,
             name: emp.name,
-            date,
-            status,
-            advance,
+            date: date,
+            status: status,
+            advance: advance,
             timestamp: new Date()
         });
 
-        alert("✅ Record Saved Successfully!");
-
-        // 🔥 reload hata ke smooth refresh
+        alert("✅ Record Saved");
         loadLogs();
+        // 🔥 FORM RESET (IMPORTANT)
+        document.getElementById('attStatus').value = "1"; // default Full Day
+        document.getElementById('attAdvance').value = "0";
 
     } catch (e) {
         console.error(e);
         alert("Error saving record");
     }
 });
-
 // ================= LOAD TABLE =================
 async function loadLogs() {
     const q = query(
         collection(db, "daily_records"),
-        orderBy("date", "desc"),
-        limit(10)
+        orderBy("date", "desc")
     );
 
     const snapshot = await getDocs(q);
+    const selectedMonth = document.getElementById("filterMonth")?.value;
+
     const tableBody = document.getElementById('attendanceLogs');
     tableBody.innerHTML = "";
 
     snapshot.forEach(docSnap => {
+
         const data = docSnap.data();
 
+        // ✅ MONTH FILTER (IMPORTANT FIX)
+        if (selectedMonth && !data.date.startsWith(selectedMonth)) {
+            return;
+        }
+
         let statusText = "";
-        if (data.status === 1) statusText = "Full Day";
+        if (data.status === 1) statusText = "Present";
         else if (data.status === 0.5) statusText = "Half Day";
         else if (data.status === 1.5) statusText = "Overtime";
         else statusText = "Absent";
 
         tableBody.innerHTML += `
-<tr>
-    <td>${data.date}</td>
-    <td>${data.name || "-"}</td>
-    <td>${statusText}</td>
-    <td>
-        <span class="amt-red">₹${data.advance || 0}</span>
-        <button onclick="editAdvance('${docSnap.id}', ${data.advance || 0})" 
-            style="margin-left:10px; cursor:pointer;">
-            ✏️
-        </button>
-    </td>
-</tr>
-`;
+        <tr>
+            <td>${data.date}</td>
+            <td>${data.name || "-"}</td>
+            <td>${statusText}</td>
+            <td>
+                <span class="amt-red">₹${data.advance || 0}</span>
+            </td>
+
+            <td>
+                <button onclick="editRecord('${docSnap.id}', ${data.advance || 0}, ${data.status})"
+                    style="cursor:pointer;">
+                    Edit
+                </button>
+
+                <button onclick="deleteRecord('${docSnap.id}')"
+                    style="margin-left:10px; cursor:pointer; color:red;">
+                    Delete
+                </button>
+            </td>
+        </tr>
+        `;
     });
+
+    // ✅ EMPTY STATE (PRO UX)
+    if (tableBody.innerHTML === "") {
+        tableBody.innerHTML = `
+        <tr>
+            <td colspan="5" style="text-align:center; padding:20px; color:gray;">
+                No records found for selected month
+            </td>
+        </tr>`;
+    }
 }
 
 // ================= LOAD REPORT EMPLOYEES =================
@@ -137,70 +185,89 @@ document.getElementById("downloadReportBtn")
 
     const emp = JSON.parse(selected);
 
-    const snapshot = await getDocs(collection(db, "daily_records"));
+    try {
+        // ✅ CORRECT QUERY (ONLY EMPLOYEE FILTER)
+        const q = query(
+            collection(db, "daily_records"),
+            where("aadhaar", "==", emp.aadhaar)
+        );
 
-    let data = [];
+        const snapshot = await getDocs(q);
 
-    snapshot.forEach(docSnap => {
-        const d = docSnap.data();
+        let data = [];
 
-        if (d.aadhaar === emp.aadhaar && d.date.startsWith(month)) {
+        snapshot.forEach(docSnap => {
+            const d = docSnap.data();
 
-            let statusText = "";
-            if (d.status === 1) statusText = "Full Day";
-            else if (d.status === 0.5) statusText = "Half Day";
-            else if (d.status === 1.5) statusText = "Overtime";
-            else statusText = "Absent";
+            // ✅ MONTH FILTER
+            if (d.date && d.date.startsWith(month)) {
 
-            data.push({
-                Date: d.date,
-                Employee: emp.name,
-                Status: statusText,
-                Advance: d.advance || 0
-            });
+                let statusText = "";
+                if (d.status === 1) statusText = "Present";
+                else if (d.status === 0.5) statusText = "Half Day";
+                else if (d.status === 1.5) statusText = "Overtime";
+                else statusText = "Absent";
+
+                data.push({
+                    Date: d.date,
+                    Employee: emp.name,
+                    Status: statusText,
+                    Advance: d.advance || 0
+                });
+            }
+        });
+
+        if (data.length === 0) {
+            alert("No records found!");
+            return;
         }
-    });
 
-    if (data.length === 0) {
-        alert("No records found!");
-        return;
-    }
+        // ✅ SORT DATE
+        data.sort((a, b) => new Date(a.Date) - new Date(b.Date));
 
-    const XLSX = window.require("xlsx");
-    const { ipcRenderer } = window.require("electron");
+        // ✅ EXCEL EXPORT
+        const XLSX = window.require("xlsx");
+        const { ipcRenderer } = window.require("electron");
 
-    const ws = XLSX.utils.json_to_sheet(data);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Attendance");
+        const ws = XLSX.utils.json_to_sheet(data);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Attendance");
 
-    const buffer = XLSX.write(wb, {
-        bookType: "xlsx",
-        type: "array"
-    });
+        const buffer = XLSX.write(wb, {
+            bookType: "xlsx",
+            type: "array"
+        });
 
-    const result = await ipcRenderer.invoke("save-excel-file", buffer);
+        const result = await ipcRenderer.invoke("save-excel-file", buffer);
 
-    if (result.success) {
-        alert("✅ Attendance Excel saved: " + result.path);
-    } else {
-        alert("❌ Save cancelled");
+        if (result.success) {
+            alert("✅ Attendance Excel saved: " + result.path);
+        } else {
+            alert("❌ Save cancelled");
+        }
+
+    } catch (err) {
+        console.error(err);
+        alert("❌ Excel export failed");
     }
 });
 
-// ================= EDIT ADVANCE =================
-window.editAdvance = function(id, currentAdvance) {
+
+// ================= EDIT RECORD (ADVANCE + STATUS) =================
+window.editRecord = function(id, currentAdvance, currentStatus) {
     currentEditId = id;
 
-    const input = document.getElementById("editAdvanceInput");
+    const advanceInput = document.getElementById("editAdvanceInput");
+    const statusInput = document.getElementById("editStatusInput");
 
-    input.value = currentAdvance;
+    advanceInput.value = currentAdvance;
+    statusInput.value = currentStatus;
 
     document.getElementById("editModal").style.display = "flex";
 
-    // 🔥 HARD FIX (focus + select)
     setTimeout(() => {
-        input.focus();
-        input.select();
+        advanceInput.focus();
+        advanceInput.select();
     }, 50);
 };
 
@@ -251,8 +318,24 @@ document.getElementById("saveAdvanceBtn")
         alert("❌ Update failed");
     }
 });
+window.deleteRecord = async function(id) {
+
+    if (!confirm("Delete this record?")) return;
+
+    try {
+        await deleteDoc(doc(db, "daily_records", id));
+        alert("🗑️ Deleted");
+        loadLogs();
+    } catch (err) {
+        console.error(err);
+        alert("Delete failed");
+    }
+};
 
 // ================= INIT =================
 loadEmployees();
 loadLogs();
 loadReportEmployees();
+
+document.getElementById("filterMonth")
+?.addEventListener("change", loadLogs);
